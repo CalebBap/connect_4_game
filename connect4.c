@@ -2,19 +2,136 @@
 
 #include "connect4.h"
 
-int SecondPlacePrize(int prize1, int prize2, int prize3)
+int PlayConnectFour(void);
+int PlayOneGame(int startingPlayer, int size, int gameType);
+
+int main(void)
 {
-	//Return the middle value of the three variables: prize1, prize2 and prize3
-	if (prize1 >= prize2 && prize1 <= prize3 || prize1 >= prize3 && prize1 <= prize2) {
-		return prize1;
-	}
-	else if (prize2 >= prize1 && prize2 <= prize3 || prize2 >= prize3 && prize2 <= prize1) {
-		return prize2;
-	}
-	else if (prize3 >= prize1 && prize3 <= prize2 || prize3 >= prize2 && prize3 <= prize1) {
-		return prize3;
+	int userResponse = 1;
+	while(userResponse){
+		userResponse = PlayConnectFour();
 	}
 	return 0;
+}
+
+int PlayConnectFour(void)
+{
+	int size, gameType, numberOfGames, result, userResponse;
+	int i, wins1, wins2, player;
+	srand((unsigned int)time(NULL));
+
+	// Prompt the user for the board size
+	printf("\n\n==================");
+	printf("\nEnter board size: ");
+	scanf("%d", &size);
+
+	// Get play options:
+	printf("Options:\n");
+	printf(" [1] = Human vs. Human\n");
+	printf(" [2] = Human vs. Bot1\n");
+	printf(" [3] = Bot1 vs. Bot2\n");
+	printf("Choose game type: ");
+	scanf("%d", &gameType);
+	
+	numberOfGames = 1;
+	result = 0;
+	
+	// If two bots are playing a tournament, let the user choose how many games
+	if (gameType == 3) {
+		printf("Number of games: ");
+		scanf("%d", &numberOfGames);
+	}
+
+	wins1 = 0;
+	wins2 = 0;
+	player = 1;
+
+	for (i = 0; i < numberOfGames; i++) {
+		result = PlayOneGame(player, size, gameType);
+		if (result == 1) {
+			wins1++;
+		} else {
+			wins2++;
+		}
+		// Switch the starting player for the next game
+		player = 3 - player;
+	}
+
+	// If a single game was played, show the result of the game, otherwise report the result of the tournament:
+	if (numberOfGames == 1) {
+		printf("\nGame over! Congratulations! Winner is Player %d\n\n", result);
+	} else {
+		printf("\nTournament over! Games played = %d\nPlayer 1 wins = %d / Player 2 wins = %d\n\n", numberOfGames, wins1, wins2);
+	}
+	
+	printf("Play again?:\n");
+	printf(" [0] = No\n");
+	printf(" [1] = Yes\n");
+	scanf("%d", &userResponse);
+	return userResponse;
+	
+}
+
+void GetMoveHuman(char *side, int *move, int player)
+{
+	char a = ' ';
+	char b = ' ';
+	printf("Player %d: enter move [side/position]: ", player);
+	while (!(a == 'N' || a == 'W' || a == 'E' || a == 'S')) {
+		scanf("%c", &a);
+	}
+	while (!(b >= '0' && b <= '9')) {
+		scanf("%c", &b);
+	}
+	*side = a;
+	*move = (int)(b - '0');
+}
+
+int PlayOneGame(int startingPlayer, int size, int gameType)
+{
+	int board[MAX_SIZE][MAX_SIZE];
+	char displayBoardString[(MAX_SIZE+5)*(MAX_SIZE+5)];
+	int player, gameOver, move, lastRow, lastCol;
+	char side;
+
+	player = startingPlayer;
+	gameOver = 0;
+
+	// Initialise the board, and display it if a human is involved in this game
+	InitialiseBoard(board, size);
+	if (gameType != 3) {
+		GetDisplayBoardString(board, size, displayBoardString);
+		printf("%s", displayBoardString);
+	}
+
+	// Play one move at a time, displaying the board if necessary, until the game is over
+	while (!gameOver) {
+		if (gameType == 1) {
+			GetMoveHuman(&side, &move, player);
+		} else if (gameType == 2) {
+			if (player == 1) {
+				GetMoveHuman(&side, &move, player);
+			} else {
+				GetMoveBot1(board, size, player, &side, &move);
+			}
+		} else {
+			if (player == 1) {
+				GetMoveBot1(board, size, player, &side, &move);
+			} else {
+				GetMoveBot2(board, size, player, &side, &move);
+			}
+		}
+		AddMoveToBoard(board, size, side, move, player, &lastRow, &lastCol);
+		gameOver = CheckGameOver(board, size, player, lastRow, lastCol);
+		if (gameType != 3) {
+			GetDisplayBoardString(board, size, displayBoardString);
+			printf("%s", displayBoardString);
+		}
+		if (!gameOver) {
+			player = 3 - player;
+		}
+	}
+	return player;
 }
 
 int FourInARow(int values[], int length)
@@ -50,20 +167,6 @@ int FourInARow(int values[], int length)
 	return -1;
 }
 
-int BinaryToDecimal(int binary) {
-	int decimal = 0;
-	int base = 1;
-	int remainder;
-
-	while (binary > 0) {
-		remainder = binary % 10; // Get last digit of binary number
-		decimal = decimal + remainder * base; // Multiply last digit by its relative base and add this to the total decimal number
-		binary = binary / 10; //Remove last digit from binary number
-		base = base * 2; // Increase base
-	}
-	return decimal;
-}
-
 void Swap(double *array_list, int x, int y) {
 	// Swap values stored at two index positions 
 	double temporary = array_list[x];
@@ -83,57 +186,6 @@ void Bubble(double *array_list, int length) {
 void Sort(double *array_list, int length) {
 	for (int i = 0; i < length; i++) {
 		Bubble(array_list, length);
-	}
-}
-
-double MedianAbility(double abilities[], int length)
-{
-	int index1;
-	int index2;
-
-	Sort(abilities, length);
-
-	if (length % 2 == 0) { // If the number of values is even...
-		// Find middle two numbers in an array and return their average value
-		index1 = (length / 2) - 1;
-		index2 = length / 2;
-		return (abilities[index1] + abilities[index2]) / 2;
-	}
-	else { // If the number of values is odd...
-		index1 = length / 2;
-		return abilities[index1]; // Return the middle value in the array
-	}
-}
-
-void RemoveSpaces(char *name)
-{
-	char character = name[0];
-	int index = 0;
-	int indexSpaces;
-	int countSpaces = 0;
-	int length = 0;
-
-	// Determine length of string by counting how many index positions it takes to get to the end of string character
-	while (name[length] != '\0') {
-		length++;
-	}
-
-	while (character != '\0') { // Go through characters in String finding any blank spaces
-		if (name[index] == ' ') {
-			indexSpaces = index + 1;
-			while (name[indexSpaces] == ' ') { // Determine how many blanks spaces are present
-				indexSpaces++;
-				countSpaces++;
-			}
-
-			for (int x = (index + 1); x < length; x++) { // Replace space with next non-space character
-				name[x] = name[(x + countSpaces)];
-			}
-
-			countSpaces = 0;
-		}
-		index++;
-		character = name[index];
 	}
 }
 
