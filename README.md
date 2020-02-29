@@ -22,4 +22,5 @@ The size of the board may also be set by the user. Additionally, the game can be
 - Human vs. Human
 - Human vs. Bot
 - Bot vs. Bot 
+
 When the game mode is Bot vs. Bot, it is possible to set how many games the bots play against each other.
